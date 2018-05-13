@@ -3,17 +3,25 @@
 
 #include <stdint.h>
 
-struct buffer_slot {
-    uint16_t size;
-    uint16_t data[0];
+struct z_cirbuf{
+    uint32_t w;
+    uint32_t buffer_size;
+    int fd;
+    void *buffer;
+    uint32_t padding[4];
+    uint32_t r;
 };
 
-struct z_circular_buffer {
-    uint32_t write_seq;
-    uint32_t buffer_size;
-    uint32_t n_buffer_slot;
-    struct buffer_slot *buffer_head;
-    uint32_t read_seq;
-};
+struct z_cirbuf *
+z_cirbuf_create(uint32_t buffer_size);
+
+void
+z_cirbuf_destroy(struct z_cirbuf *cb);
+
+int
+z_cirbuf_produce(struct z_cirbuf *cb, void *data, uint32_t size);
+
+int
+z_cirbuf_consume(struct z_cirbuf *cb, void *ret_buf, uint32_t size);
 
 #endif
