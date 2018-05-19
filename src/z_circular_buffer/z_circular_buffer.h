@@ -2,14 +2,21 @@
 #define Z_CIRCULAR_BUFFER
 
 #include <stdint.h>
+#include "../utilities/utilities.h"
 
+/* Locate the most frequently written value
+ * align with cache line
+ */
 struct z_cirbuf{
+    /* cacheline0 */
     uint32_t w;
+    void *buffer;
     uint32_t buffer_size;
     int fd;
-    void *buffer;
-    uint32_t padding[4];
+    uint32_t padding1[10];
+    /* cacheline1 */
     uint32_t r;
+    uint32_t padding2;
 };
 
 struct z_cirbuf *

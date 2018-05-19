@@ -3,11 +3,11 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <malloc.h>
 #include <sys/syscall.h>
 #include <sys/mman.h>
 #include "z_circular_buffer.h"
 
-#define CACHE_LINE_SIZE 64
 #define PAGE_SIZE 4096
 
 static int
@@ -18,10 +18,16 @@ memfd_create(const char *name, unsigned int flags) {
 struct z_cirbuf *
 z_cirbuf_create(uint32_t buffer_size)
 {
-    struct z_cirbuf *cb = (struct z_cirbuf *)malloc(sizeof(struct z_cirbuf));
+    struct z_cirbuf *cb = (struct z_cirbuf *)memalign(CACHELINE_SIZE, sizeof(struct z_cirbuf));
     if (cb == NULL) {
         perror("malloc failed");
+        exit(0);
     }
+    if ((uint64_t)cb % 64 != 0) {
+        fprintf(stderr, "z_cirbuf addess is not 64 byte aligned\n");
+        exit(0);
+    }
+
     if (buffer_size % PAGE_SIZE != 0) {
         return NULL;
     }
