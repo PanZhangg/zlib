@@ -39,6 +39,7 @@ z_cirbuf_create(uint32_t buffer_size)
     cb->w = 0;
     cb->r = 0;
     cb->buffer = NULL;
+    memset(&cb->stat, 0 , sizeof(cb->stat));
     cb->fd = memfd_create("z_cirbuf", 0);
     if (cb->fd == -1) {
        perror("memfd_create failed");
@@ -76,21 +77,25 @@ z_cirbuf_destroy(struct z_cirbuf *cb) {
 int
 z_cirbuf_produce(struct z_cirbuf *cb, void *data, uint32_t size) {
     if(cb->buffer_size - (cb->w - cb->r) < size) {
+        cb->stat.nr_full++;
         return -1;
     }
     memcpy((char *)cb->buffer + cb->w, data, size);
     cb->w += size;
+    cb->stat.w_bytes += size;
     return 0;
 }
 
 int
 z_cirbuf_consume(struct z_cirbuf *cb, void *ret_buf, uint32_t size) {
     if (cb->w - cb->r < size) {
+        cb->stat.nr_empty++;
         return -1;
     }
 
     memcpy(ret_buf, (char *)cb->buffer + cb->r, size);
     cb->r += size;
+    cb->stat.r_bytes += size;
     if (cb->r > cb->buffer_size) {
         cb->r -= cb->buffer_size;
         cb->w -= cb->buffer_size;
