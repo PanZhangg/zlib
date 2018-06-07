@@ -10,6 +10,10 @@
 
 #define PAGE_SIZE 4096
 
+#ifndef __NR_memfd_create
+#define __NR_memfd_create 319
+#endif
+
 static int
 memfd_create(const char *name, unsigned int flags) {
     return syscall(__NR_memfd_create, name, flags);
@@ -35,7 +39,11 @@ z_cirbuf_create(uint32_t buffer_size)
     cb->w = 0;
     cb->r = 0;
     cb->buffer = NULL;
-    cb->fd = memfd_create("z_cirbuf", buffer_size);
+    cb->fd = memfd_create("z_cirbuf", 0);
+    if (cb->fd == -1) {
+       perror("memfd_create failed");
+       exit(0);
+    }
     ftruncate(cb->fd, buffer_size);
 
     cb->buffer = mmap(NULL, buffer_size << 1,
