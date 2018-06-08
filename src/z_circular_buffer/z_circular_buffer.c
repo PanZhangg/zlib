@@ -40,6 +40,7 @@ z_cirbuf_create(uint32_t buffer_size)
     cb->r = 0;
     cb->buffer = NULL;
     memset(&cb->stat, 0 , sizeof(cb->stat));
+    pthread_spin_init(&cb->lock, 0);
     cb->fd = memfd_create("z_cirbuf", 0);
     if (cb->fd == -1) {
        perror("memfd_create failed");
@@ -71,25 +72,32 @@ z_cirbuf_destroy(struct z_cirbuf *cb) {
     if (ret != 0) {
         perror("munmap failed");
     }
+
+    pthread_spin_destroy(&cb->lock);
     free(cb);
 }
 
 int
 z_cirbuf_produce(struct z_cirbuf *cb, void *data, uint32_t size) {
+    pthread_spin_lock(&cb->lock);
     if(cb->buffer_size - (cb->w - cb->r) < size) {
         cb->stat.nr_full++;
+        pthread_spin_unlock(&cb->lock);
         return -1;
     }
     memcpy((char *)cb->buffer + cb->w, data, size);
     cb->w += size;
     cb->stat.w_bytes += size;
+    pthread_spin_unlock(&cb->lock);
     return 0;
 }
 
 int
 z_cirbuf_consume(struct z_cirbuf *cb, void *ret_buf, uint32_t size) {
+    pthread_spin_lock(&cb->lock);
     if (cb->w - cb->r < size) {
         cb->stat.nr_empty++;
+        pthread_spin_unlock(&cb->lock);
         return -1;
     }
 
@@ -100,5 +108,6 @@ z_cirbuf_consume(struct z_cirbuf *cb, void *ret_buf, uint32_t size) {
         cb->r -= cb->buffer_size;
         cb->w -= cb->buffer_size;
     }
+    pthread_spin_unlock(&cb->lock);
     return 0;
 }

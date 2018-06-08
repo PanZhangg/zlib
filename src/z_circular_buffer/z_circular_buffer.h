@@ -2,6 +2,7 @@
 #define Z_CIRCULAR_BUFFER
 
 #include <stdint.h>
+#include <pthread.h>
 #include "../utilities/utilities.h"
 
 struct z_cirbuf_stat {
@@ -20,7 +21,8 @@ struct z_cirbuf {
     uint32_t buffer_size;
     int fd;
     struct z_cirbuf_stat stat;
-    uint32_t padding1[2];
+    pthread_spinlock_t lock;
+    uint32_t padding1;
     /* cacheline1 */
     uint32_t r;
     uint32_t padding2;
