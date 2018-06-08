@@ -80,28 +80,29 @@ z_cirbuf_destroy(struct z_cirbuf *cb) {
 int
 z_cirbuf_produce(struct z_cirbuf *cb, void *data, uint32_t size) {
     pthread_spin_lock(&cb->lock);
+    uint32_t w_t = cb->w;
     if(cb->buffer_size - (cb->w - cb->r) < size) {
         cb->stat.nr_full++;
         pthread_spin_unlock(&cb->lock);
         return -1;
     }
-    memcpy((char *)cb->buffer + cb->w, data, size);
     cb->w += size;
     cb->stat.w_bytes += size;
     pthread_spin_unlock(&cb->lock);
+    memcpy((char *)cb->buffer + w_t, data, size);
     return 0;
 }
 
 int
 z_cirbuf_consume(struct z_cirbuf *cb, void *ret_buf, uint32_t size) {
     pthread_spin_lock(&cb->lock);
+    uint32_t r_t = cb->r;
     if (cb->w - cb->r < size) {
         cb->stat.nr_empty++;
         pthread_spin_unlock(&cb->lock);
         return -1;
     }
 
-    memcpy(ret_buf, (char *)cb->buffer + cb->r, size);
     cb->r += size;
     cb->stat.r_bytes += size;
     if (cb->r > cb->buffer_size) {
@@ -109,5 +110,6 @@ z_cirbuf_consume(struct z_cirbuf *cb, void *ret_buf, uint32_t size) {
         cb->w -= cb->buffer_size;
     }
     pthread_spin_unlock(&cb->lock);
+    memcpy(ret_buf, (char *)cb->buffer + r_t, size);
     return 0;
 }
